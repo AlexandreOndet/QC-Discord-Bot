@@ -1,0 +1,91 @@
+[
+ {
+  "id": "FMCaMontreal2026",
+  "name": "FMC à Montréal 2026",
+  "venue": "[École de Technologie Supérieure](https://www.etsmtl.ca/)",
+  "venue_details": "Salle E-4025",
+  "venue_address": "1220 R. Notre Dame O, Montréal, QC H3C 1K6, Canada ",
+  "city": "Montréal, Quebec",
+  "start_date": "2026-08-29",
+  "end_date": "2026-08-29",
+  "competitor_limit": 35,
+  "event_ids": [
+   "333fm"
+  ],
+  "announced_at": "2026-07-30T14:52:32.000Z"
+ },
+ {
+  "id": "ImaginaireQuebec2026",
+  "name": "Imaginaire Québec 2026",
+  "venue": "[Boutique Imaginaire de Laurier](https://www.laurierquebec.com/stores/imaginaire/)",
+  "venue_details": "Troisième étage, à côté du magasin Imaginaire",
+  "venue_address": "2740 Boulevard Laurier, Quebec, QC, G1V4P7",
+  "city": "Quebec City, Quebec",
+  "start_date": "2026-10-10",
+  "end_date": "2026-10-11",
+  "competitor_limit": 60,
+  "event_ids": [
+   "333",
+   "222",
+   "444",
+   "555",
+   "333oh",
+   "clock",
+   "minx",
+   "pyram",
+   "skewb",
+   "sq1"
+  ],
+  "announced_at": "2026-08-22T03:31:29.000Z"
+ },
+ {
+  "id": "GrosJouetsaMontreal2026",
+  "name": "Gros Jouets à Montréal 2026",
+  "venue": "[École de Technologie Supérieure](https://www.etsmtl.ca)",
+  "venue_details": "Pavillon E, salon des diplômés Vidéotron",
+  "venue_address": "1100 Notre-Dame W, Montreal, QC H3C 1K3",
+  "city": "Montréal, Quebec",
+  "start_date": "2026-04-25",
+  "end_date": "2026-04-26",
+  "competitor_limit": 60,
+  "event_ids": [
+   "444",
+   "555",
+   "666",
+   "777",
+   "minx",
+   "444bf",
+   "555bf"
+  ],
+  "announced_at": "2026-01-15T01:24:47.000Z"
+ },
+ {
+  "id": "ChampionnatQuebecois2026",
+  "name": "Championnat Québécois 2026",
+  "venue": "[Pavillon Alphonse-Desjardins](https://www.ulaval.ca/plan-du-campus/pavillon-alphonse-desjardins)",
+  "venue_details": "Cercle Universitaire ADJ-4512 (Vendredi) et Grand Salon POL-2244 (Samedi et Dimanche)",
+  "venue_address": "2305, rue de l’Université, Québec (Québec) G1V 0A6",
+  "city": "Québec, Quebec",
+  "start_date": "2026-05-08",
+  "end_date": "2026-05-10",
+  "competitor_limit": 160,
+  "event_ids": [
+   "333",
+   "222",
+   "444",
+   "555",
+   "666",
+   "777",
+   "333bf",
+   "333oh",
+   "clock",
+   "minx",
+   "pyram",
+   "skewb",
+   "sq1",
+   "444bf",
+   "555bf"
+  ],
+  "announced_at": "2026-01-20T03:01:44.000Z"
+ }
+]
