@@ -32,4 +32,5 @@ test('inLastHour covers the previous full clock hour', () => {
   assert.equal(inLastHour(at('2026-11-06T13:59:59.999Z'), now), false);
   assert.equal(inLastHour(at('2026-11-06T15:00:00.000Z'), now), false);
   assert.equal(inLastHour(at(null), now), false);
+  assert.equal(inLastHour(at('2026-11-06T12:30:00.000Z'), now, 3), true);
 });
