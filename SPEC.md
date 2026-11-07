@@ -21,10 +21,10 @@ Posts an announcement in the QC Discord for every new WCA competition in Quebec,
 
 ## `/projet nom:<nom>`
 - Creates a category `<nom>` placed right above category `1019989519166095360`, visible only to Administrateur, Modérateur, Délégué WCA and Organisateur.
-- Inside it: `<nom>-public` (same roles) and `<nom>-private` (QC-Delegates only).
+- Inside it: `<nom>-public` (same roles) and `<nom>-private` (Délégué-QC only).
 - `nom`: at most 92 characters, so `<nom>-private` fits Discord's 100.
 - Only members with "Manage Channels" see the command.
-- A role missing or duplicated (looked up by exact name), or the anchor category missing: ephemeral error, nothing created.
+- Roles are fixed ids. A role or the anchor category missing: ephemeral error, nothing created.
 - A Discord error midway: whatever was created is deleted, so the command can just be rerun.
 - Bot needs Manage Channels and Manage Roles.
 

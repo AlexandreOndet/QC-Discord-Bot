@@ -63,31 +63,26 @@ async function announce(i, log) {
 }
 
 const ABOVE_CATEGORY = '1019989519166095360';
-const PUBLIC_ROLES = ['Administrateur', 'Modérateur', 'Délégué WCA', 'Organisateur'];
-const PRIVATE_ROLE = 'QC-Delegates';
+// Administrateur, Modérateur, Délégué WCA, Organisateur
+const PUBLIC_ROLES = ['1019988317732876328', '1019990522019971152', '1019987899921481828', '1019988165026660427'];
+const PRIVATE_ROLE = '1105994988157939803'; // Délégué-QC
 
 async function projet(i, log) {
   const name = i.options.getString('nom').trim();
   const { guild } = i;
-  const ids = {};
-  const bad = [];
-  for (const n of [...PUBLIC_ROLES, PRIVATE_ROLE]) {
-    const found = guild.roles.cache.filter((r) => r.name === n);
-    if (found.size === 1) ids[n] = found.first().id;
-    else bad.push(n);
-  }
+  const bad = [...PUBLIC_ROLES, PRIVATE_ROLE].filter((id) => !guild.roles.cache.has(id));
   const above = guild.channels.cache.get(ABOVE_CATEGORY);
-  const problem = bad.length ? `Rôle introuvable ou en double: ${bad.join(', ')}` : !above && `Catégorie ${ABOVE_CATEGORY} introuvable.`;
+  const problem = bad.length ? `Rôle introuvable: ${bad.join(', ')}` : !above && `Catégorie ${ABOVE_CATEGORY} introuvable.`;
   if (problem) {
     log(problem);
     return problem;
   }
   // The bot's own entry keeps it able to add channels inside the hidden category.
   const allow = (id) => ({ id, allow: [PermissionFlagsBits.ViewChannel] });
-  const view = (names) => [
+  const view = (roles) => [
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
     allow(client.user.id),
-    ...names.map((n) => allow(ids[n])),
+    ...roles.map(allow),
   ];
   const created = [];
   const create = async (opts) => {
@@ -98,8 +93,8 @@ async function projet(i, log) {
   try {
     const parent = await create({ name, type: ChannelType.GuildCategory, permissionOverwrites: view(PUBLIC_ROLES) });
     await parent.setPosition(above.position);
-    const text = (suffix, names) =>
-      create({ name: `${name}-${suffix}`, type: ChannelType.GuildText, parent, permissionOverwrites: view(names) });
+    const text = (suffix, roles) =>
+      create({ name: `${name}-${suffix}`, type: ChannelType.GuildText, parent, permissionOverwrites: view(roles) });
     const pub = await text('public', PUBLIC_ROLES);
     const priv = await text('private', [PRIVATE_ROLE]);
     log('created');
