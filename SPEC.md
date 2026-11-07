@@ -63,7 +63,7 @@ Posts an announcement in the QC Discord for every new WCA competition in Quebec.
 | 333oh | 3x3 à une main | | |
 
 ## Acceptance examples
-Expected output from the live WCA data. Addresses come straight from WCA, so they differ from the hand-written posts.
+Expected output from the live WCA data.
 
 ```
 FMC à Montréal 2026
@@ -110,4 +110,4 @@ Championnat Québécois 2026
 ```
 
 ## Out of scope
-Editing or deleting posts, non-Quebec comps in the hourly check, cancellation notices, intro lines like "Le second championnat provincial du Québec est arrivé!".
+Editing or deleting posts, non-Quebec comps in the automatic check, cancellation notices, intro lines like "Le second championnat provincial du Québec est arrivé!".

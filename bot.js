@@ -4,7 +4,7 @@ import { format, compId, announcedIn, windowEnd } from './format.js';
 const WCA = 'https://www.worldcubeassociation.org/api/v0/competitions';
 
 async function getJson(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(30e3) });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`WCA ${res.status} for ${url}`);
   return res.json();
@@ -18,13 +18,15 @@ const newQuebecComps = async (end, minutes) =>
     .filter((c) => c.city.endsWith(', Quebec') && announcedIn(c, end, minutes));
 
 if (process.argv[2] === 'print') {
-  const comp = await getComp(compId(process.argv[3] ?? '') ?? '');
+  const id = compId(process.argv[3] ?? '');
+  const comp = id && (await getComp(id));
   if (!comp) throw new Error('Unknown competition');
   console.log(format(comp));
   process.exit(0);
 }
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+client.on('error', console.error);
 const ping = { parse: ['everyone'] };
 
 const command = new SlashCommandBuilder()
@@ -37,10 +39,10 @@ const command = new SlashCommandBuilder()
 
 client.on('interactionCreate', async (i) => {
   if (!i.isChatInputCommand() || i.commandName !== 'announce') return;
-  await i.deferReply({ flags: MessageFlags.Ephemeral });
   const input = i.options.getString('url');
   const who = `${i.user.tag} in #${i.channel?.name}`;
   try {
+    await i.deferReply({ flags: MessageFlags.Ephemeral });
     const id = compId(input);
     const comp = id && (await getComp(id));
     if (!comp) {
@@ -57,7 +59,7 @@ client.on('interactionCreate', async (i) => {
     await i.editReply('Annonce publiée.');
   } catch (e) {
     console.error(`/announce ${input} failed (${who})`, e);
-    await i.editReply(`Erreur: ${e.message}`);
+    await i.editReply(`Erreur: ${e.message}`).catch(() => {});
   }
 });
 
@@ -96,7 +98,6 @@ function schedule() {
 setInterval(() => console.log('alive'), 3600e3);
 
 client.once('clientReady', async () => {
-  // `node bot.js check <hours>`: one manual check over a wider window, then exit.
   if (process.argv[2] === 'check') {
     await postNew(windowEnd(Date.now(), EVERY), Number(process.argv[3] ?? 1) * 60);
     process.exit(0);

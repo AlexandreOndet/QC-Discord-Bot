@@ -54,4 +54,4 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now qc-bot qc-bot-update.timer && journalctl -u qc-bot -f
 ```
 Pushes to `main` reach the VM within 5 minutes (`update.sh`; relies on passwordless sudo, the GCE default).
-Free tier: one e2-micro in `us-east1`, `us-central1` or `us-west1`, up to 30 GB of `pd-standard` disk (the default disk type is billed). The external IPv4 address may be billed (about $3.65/month); set a budget alert to check.
+Free tier: one e2-micro in `us-east1`, `us-central1` or `us-west1`, up to 30 GB of `pd-standard` disk (the default disk type is billed). The external IPv4 address may be billed (about $3.65/month).
