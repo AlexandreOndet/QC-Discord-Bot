@@ -1,6 +1,6 @@
 # QC comp announcer: spec
 
-Posts an announcement in the QC Discord for every new WCA competition in Quebec.
+Posts an announcement in the QC Discord for every new WCA competition in Quebec, and sets up channels for new competition projects.
 
 ## Behavior
 - **Runtime**: one discord.js bot process on a GCP e2-micro VM (systemd), env `DISCORD_TOKEN`, `ANNOUNCE_CHANNEL_ID`.
@@ -9,7 +9,8 @@ Posts an announcement in the QC Discord for every new WCA competition in Quebec.
 - **New comp**: `announced_at` is within the 5-minute window `[end - 5 min, end)`, where `end` is a multiple of 5 minutes. Each window is checked 2 minutes after it ends, to allow for WCA list lag. Windows tile time with no overlap, so each comp is posted once, within about 2 to 7 minutes of being announced. Restarts don't backfill or repeat a window.
 - **Output**: one message per new comp, pinging @everyone.
 - **Errors**: a failed check is logged and retried up to 3 times, 1 minute apart, for the same window; after that the window is skipped.
-- **Logs** (`journalctl -u qc-bot`): every `/announce` (posted, preview, not found, failed, with user and channel), every automatic post, failed checks, and an `alive` line each hour.
+- **Commands**: registered at bot startup. Replies are ephemeral and deferred first, so slow WCA or Discord responses don't hit Discord's 3 s limit. Both work only in the QC server (fixed channel and category ids).
+- **Logs** (`journalctl -u qc-bot`): every `/announce` (posted, preview, not found, failed) and `/projet` (created, setup problem, failed), with user and channel, every automatic post, failed checks, and an `alive` line each hour.
 
 ## `/announce url:<comp URL or id> [private:true|false]`
 - Builds the message for that comp (any comp, Quebec or not).
@@ -17,14 +18,14 @@ Posts an announcement in the QC Discord for every new WCA competition in Quebec.
 - `private` true: ephemeral reply only the sender sees; no ping. For previews and testing.
 - Only members with the "Mention @everyone" permission see the command, so it can't be used to spam pings.
 - Invalid URL or unknown comp: ephemeral error message.
-- Reply is deferred first, so slow WCA responses don't hit Discord's 3 s limit.
-- Commands are registered at bot startup.
 
 ## `/projet nom:<nom>`
 - Creates a category `<nom>` placed right above category `1019989519166095360`, visible only to Administrateur, Modérateur, Délégué WCA and Organisateur.
 - Inside it: `<nom>-public` (same roles) and `<nom>-private` (QC-Delegates only).
+- `nom`: at most 92 characters, so `<nom>-private` fits Discord's 100.
 - Only members with "Manage Channels" see the command.
-- A missing role (looked up by exact name): ephemeral error, nothing created.
+- A role missing or duplicated (looked up by exact name), or the anchor category missing: ephemeral error, nothing created.
+- A Discord error midway: whatever was created is deleted, so the command can just be rerun.
 - Bot needs Manage Channels and Manage Roles.
 
 ## CLI
