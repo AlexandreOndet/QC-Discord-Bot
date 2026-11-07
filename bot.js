@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { ChannelType, Client, GatewayIntentBits, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { format, compId, announcedIn, windowEnd } from './format.js';
 
 const WCA = 'https://www.worldcubeassociation.org/api/v0/competitions';
@@ -29,7 +29,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.on('error', console.error);
 const ping = { parse: ['everyone'] };
 
-const command = new SlashCommandBuilder()
+const announceCmd = new SlashCommandBuilder()
   .setName('announce')
   .setDescription('Annonce une compétition WCA')
   .addStringOption((o) => o.setName('url').setDescription('URL ou id de la compétition WCA').setRequired(true))
@@ -37,28 +37,92 @@ const command = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.MentionEveryone)
   .setContexts(InteractionContextType.Guild);
 
+const projetCmd = new SlashCommandBuilder()
+  .setName('projet')
+  .setDescription('Crée la catégorie et les salons d’un projet de compétition')
+  // 100-char Discord limit minus '-private'.
+  .addStringOption((o) => o.setName('nom').setDescription('Nom du projet').setRequired(true).setMaxLength(92))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+  .setContexts(InteractionContextType.Guild);
+
+async function announce(i, log) {
+  const id = compId(i.options.getString('url'));
+  const comp = id && (await getComp(id));
+  if (!comp) {
+    log('not found');
+    return 'Compétition introuvable.';
+  }
+  if (i.options.getBoolean('private')) {
+    log('private preview');
+    return { content: format(comp), allowedMentions: { parse: [] } };
+  }
+  // Sent as a new message: mentions in an edited interaction reply don't notify.
+  await i.channel.send({ content: format(comp), allowedMentions: ping });
+  log('posted');
+  return 'Annonce publiée.';
+}
+
+const ABOVE_CATEGORY = '1019989519166095360';
+const PUBLIC_ROLES = ['Administrateur', 'Modérateur', 'Délégué WCA', 'Organisateur'];
+const PRIVATE_ROLE = 'QC-Delegates';
+
+async function projet(i, log) {
+  const name = i.options.getString('nom').trim();
+  const { guild } = i;
+  const ids = {};
+  const bad = [];
+  for (const n of [...PUBLIC_ROLES, PRIVATE_ROLE]) {
+    const found = guild.roles.cache.filter((r) => r.name === n);
+    if (found.size === 1) ids[n] = found.first().id;
+    else bad.push(n);
+  }
+  const above = guild.channels.cache.get(ABOVE_CATEGORY);
+  const problem = bad.length ? `Rôle introuvable ou en double: ${bad.join(', ')}` : !above && `Catégorie ${ABOVE_CATEGORY} introuvable.`;
+  if (problem) {
+    log(problem);
+    return problem;
+  }
+  // The bot's own entry keeps it able to add channels inside the hidden category.
+  const allow = (id) => ({ id, allow: [PermissionFlagsBits.ViewChannel] });
+  const view = (names) => [
+    { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+    allow(client.user.id),
+    ...names.map((n) => allow(ids[n])),
+  ];
+  const created = [];
+  const create = async (opts) => {
+    const c = await guild.channels.create(opts);
+    created.push(c);
+    return c;
+  };
+  try {
+    const parent = await create({ name, type: ChannelType.GuildCategory, permissionOverwrites: view(PUBLIC_ROLES) });
+    await parent.setPosition(above.position);
+    const text = (suffix, names) =>
+      create({ name: `${name}-${suffix}`, type: ChannelType.GuildText, parent, permissionOverwrites: view(names) });
+    const pub = await text('public', PUBLIC_ROLES);
+    const priv = await text('private', [PRIVATE_ROLE]);
+    log('created');
+    return `Projet créé: ${pub} ${priv}`;
+  } catch (e) {
+    // Deleting a category leaves its children, so remove each one.
+    for (const c of created.reverse()) await c.delete().catch(() => {});
+    throw e;
+  }
+}
+
+const handlers = { announce, projet };
+
 client.on('interactionCreate', async (i) => {
-  if (!i.isChatInputCommand() || i.commandName !== 'announce') return;
-  const input = i.options.getString('url');
+  const handler = i.isChatInputCommand() && handlers[i.commandName];
+  if (!handler) return;
+  const label = `/${i.commandName} ${i.options.data[0]?.value ?? ''}`;
   const who = `${i.user.tag} in #${i.channel?.name}`;
   try {
     await i.deferReply({ flags: MessageFlags.Ephemeral });
-    const id = compId(input);
-    const comp = id && (await getComp(id));
-    if (!comp) {
-      console.log(`/announce ${input}: not found (${who})`);
-      return await i.editReply('Compétition introuvable.');
-    }
-    if (i.options.getBoolean('private')) {
-      console.log(`/announce ${id}: private preview (${who})`);
-      return await i.editReply({ content: format(comp), allowedMentions: { parse: [] } });
-    }
-    // Sent as a new message: mentions in an edited interaction reply don't notify.
-    await i.channel.send({ content: format(comp), allowedMentions: ping });
-    console.log(`/announce ${id}: posted (${who})`);
-    await i.editReply('Annonce publiée.');
+    await i.editReply(await handler(i, (what) => console.log(`${label}: ${what} (${who})`)));
   } catch (e) {
-    console.error(`/announce ${input} failed (${who})`, e);
+    console.error(`${label} failed (${who})`, e);
     await i.editReply(`Erreur: ${e.message}`).catch(() => {});
   }
 });
@@ -102,7 +166,7 @@ client.once('clientReady', async () => {
     await postNew(windowEnd(Date.now(), EVERY), Number(process.argv[3] ?? 1) * 60);
     process.exit(0);
   }
-  await client.application.commands.set([command]);
+  await client.application.commands.set([announceCmd, projetCmd]);
   console.log(`logged in as ${client.user.tag}`);
   schedule();
 });

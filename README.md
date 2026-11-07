@@ -1,6 +1,6 @@
 # QC Discord Bot
 
-Announces new Quebec WCA competitions in the QC Discord. Behavior: [SPEC.md](SPEC.md).
+Announces new Quebec WCA competitions in the QC Discord and creates competition project channels (`/projet`). Behavior: [SPEC.md](SPEC.md).
 
 ```sh
 npm install
@@ -14,7 +14,7 @@ DISCORD_TOKEN=... ANNOUNCE_CHANNEL_ID=... npm start
 1. https://discord.com/developers/applications > New Application.
 2. **Installation**: untick User Install, keep Guild Install. Install Link: None.
 3. **Bot**: Reset Token, copy it (`DISCORD_TOKEN`, ~70 chars with two dots; not the OAuth2 Client Secret). Untick Public Bot. No privileged intents needed.
-4. **OAuth2 > URL Generator**: scopes `bot`, `applications.commands`; permissions `Send Messages`, `Mention Everyone`. Nothing to save: open the Generated URL at the bottom and pick the server. Redirects and Public Client stay empty/off.
+4. **OAuth2 > URL Generator**: scopes `bot`, `applications.commands`; permissions `Send Messages`, `Mention Everyone`, `Manage Channels`, `Manage Roles`. Nothing to save: open the Generated URL at the bottom and pick the server. Redirects and Public Client stay empty/off. Already installed: add Manage Channels and Manage Roles to the bot's role instead (Server Settings > Roles).
 5. Discord settings > Advanced > Developer Mode, then right-click the announcement channel > Copy Channel ID (`ANNOUNCE_CHANNEL_ID`).
 
 ## GCP (e2-micro VM)
