@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
-import { format, compId, inLastHour } from './format.js';
+import { format, compId, announcedIn, windowEnd } from './format.js';
 
 const WCA = 'https://www.worldcubeassociation.org/api/v0/competitions';
 
@@ -12,10 +12,10 @@ async function getJson(url) {
 
 const getComp = (id) => getJson(`${WCA}/${id}`);
 
-// 25 latest-announced CA comps; far more than one hour ever brings.
-const newQuebecComps = async (hours) =>
+// 25 latest-announced CA comps; far more than one window ever brings.
+const newQuebecComps = async (end, minutes) =>
   (await getJson(`${WCA}?country_iso2=CA&sort=-announced_at&per_page=25`))
-    .filter((c) => c.city.endsWith(', Quebec') && inLastHour(c, new Date(), hours));
+    .filter((c) => c.city.endsWith(', Quebec') && announcedIn(c, end, minutes));
 
 if (process.argv[2] === 'print') {
   const comp = await getComp(compId(process.argv[3] ?? '') ?? '');
@@ -61,45 +61,49 @@ client.on('interactionCreate', async (i) => {
   }
 });
 
-async function postNew(hours = 1) {
+const EVERY = 5; // minutes per check window
+// ponytail: fixed delay for WCA list lag; a comp showing up later than this is never announced.
+const LAG = 2 * 60e3;
+
+async function postNew(end, minutes) {
   const channel = await client.channels.fetch(process.env.ANNOUNCE_CHANNEL_ID);
-  const comps = await newQuebecComps(hours);
-  console.log(`check (last ${hours}h): ${comps.length} new`);
+  const comps = await newQuebecComps(end, minutes);
+  if (comps.length || minutes > EVERY) console.log(`check (${minutes} min before ${new Date(end).toISOString()}): ${comps.length} new`);
   for (const c of comps) {
     await channel.send({ content: format(c), allowedMentions: ping });
     console.log(`announced ${c.id} in #${channel.name}`);
   }
 }
 
-async function hourly(attempt = 1) {
+async function check(end, attempt = 1) {
   try {
-    await postNew();
+    await postNew(end, EVERY);
   } catch (e) {
-    console.error(`hourly check attempt ${attempt} failed`, e);
-    // Retries stay before minute 55 so they still compute the same hour window.
-    if (attempt < 4) setTimeout(() => hourly(attempt + 1), 10 * 60e3);
+    console.error(`check for ${new Date(end).toISOString()} attempt ${attempt} failed`, e);
+    if (attempt < 4) setTimeout(() => check(end, attempt + 1), 60e3);
   }
 }
 
-function scheduleHourly() {
-  const next = new Date();
-  next.setUTCMinutes(5, 0, 0);
-  if (next <= Date.now()) next.setUTCHours(next.getUTCHours() + 1);
+function schedule() {
+  const end = windowEnd(Date.now() - LAG, EVERY) + EVERY * 60e3;
   setTimeout(() => {
-    hourly();
-    scheduleHourly();
-  }, next - Date.now());
+    check(end);
+    schedule();
+  }, end + LAG - Date.now());
 }
+
+// Visible proof of life without a log line every 5 minutes.
+setInterval(() => console.log('alive'), 3600e3);
 
 client.once('clientReady', async () => {
   // `node bot.js check <hours>`: one manual check over a wider window, then exit.
   if (process.argv[2] === 'check') {
-    await postNew(Number(process.argv[3] ?? 1));
+    await postNew(windowEnd(Date.now(), EVERY), Number(process.argv[3] ?? 1) * 60);
     process.exit(0);
   }
   await client.application.commands.set([command]);
   console.log(`logged in as ${client.user.tag}`);
-  scheduleHourly();
+  schedule();
 });
 
 client.login(process.env.DISCORD_TOKEN);

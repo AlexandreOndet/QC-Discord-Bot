@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { format, formatDates, compId, inLastHour } from '../format.js';
+import { format, formatDates, compId, announcedIn, windowEnd } from '../format.js';
 
 const comps = JSON.parse(readFileSync(new URL('comps.json', import.meta.url)));
 const spec = readFileSync(new URL('../SPEC.md', import.meta.url), 'utf8');
@@ -24,13 +24,27 @@ test('compId accepts WCA URLs and bare ids only', () => {
   assert.equal(compId('../users'), null);
 });
 
-test('inLastHour covers the previous full clock hour', () => {
-  const now = new Date('2026-11-06T15:05:00Z');
+test('announcedIn covers [end - minutes, end)', () => {
+  const end = Date.parse('2026-11-06T15:05:00Z');
   const at = (t) => ({ announced_at: t });
-  assert.equal(inLastHour(at('2026-11-06T14:00:00.000Z'), now), true);
-  assert.equal(inLastHour(at('2026-11-06T14:59:59.999Z'), now), true);
-  assert.equal(inLastHour(at('2026-11-06T13:59:59.999Z'), now), false);
-  assert.equal(inLastHour(at('2026-11-06T15:00:00.000Z'), now), false);
-  assert.equal(inLastHour(at(null), now), false);
-  assert.equal(inLastHour(at('2026-11-06T12:30:00.000Z'), now, 3), true);
+  assert.equal(announcedIn(at('2026-11-06T15:00:00.000Z'), end, 5), true);
+  assert.equal(announcedIn(at('2026-11-06T15:04:59.999Z'), end, 5), true);
+  assert.equal(announcedIn(at('2026-11-06T14:59:59.999Z'), end, 5), false);
+  assert.equal(announcedIn(at('2026-11-06T15:05:00.000Z'), end, 5), false);
+  assert.equal(announcedIn(at(null), end, 5), false);
+  assert.equal(announcedIn(at('2026-11-06T12:30:00.000Z'), end, 180), true);
+});
+
+test('consecutive windows tile without gaps or overlap', () => {
+  const step = 5;
+  const b = Date.parse('2026-11-06T15:00:00Z');
+  for (const t of ['2026-11-06T15:04:59.999Z', '2026-11-06T15:05:00.000Z', '2026-11-06T15:07:30.000Z']) {
+    const hits = [b + 5 * 60e3, b + 10 * 60e3].filter((end) => announcedIn({ announced_at: t }, end, step));
+    assert.equal(hits.length, 1, t);
+  }
+});
+
+test('windowEnd snaps to the step boundary', () => {
+  assert.equal(windowEnd(Date.parse('2026-11-06T15:07:30Z'), 5), Date.parse('2026-11-06T15:05:00Z'));
+  assert.equal(windowEnd(Date.parse('2026-11-06T15:05:00Z'), 5), Date.parse('2026-11-06T15:05:00Z'));
 });

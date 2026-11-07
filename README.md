@@ -6,6 +6,7 @@ Announces new Quebec WCA competitions in the QC Discord. Behavior: [SPEC.md](SPE
 npm install
 npm test
 node bot.js print FMCaMontreal2026   # preview, no Discord
+node bot.js check 24 | systemd-cat -t qc-bot   # on the VM: repost last 24h, testing only
 DISCORD_TOKEN=... ANNOUNCE_CHANNEL_ID=... npm start
 ```
 

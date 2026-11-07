@@ -41,9 +41,10 @@ export function compId(input) {
   return m ? m[1] : null;
 }
 
-export function inLastHour(c, now = new Date(), hours = 1) {
+export const windowEnd = (now, minutes) => Math.floor(now / (minutes * 60e3)) * minutes * 60e3;
+
+export function announcedIn(c, end, minutes) {
   if (!c.announced_at) return false;
-  const end = Math.floor(now / 3600e3) * 3600e3;
   const t = Date.parse(c.announced_at);
-  return t >= end - hours * 3600e3 && t < end;
+  return t >= end - minutes * 60e3 && t < end;
 }

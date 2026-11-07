@@ -4,11 +4,12 @@ Posts an announcement in the QC Discord for every new WCA competition in Quebec.
 
 ## Behavior
 - **Runtime**: one discord.js bot process on a GCP e2-micro VM (systemd), env `DISCORD_TOKEN`, `ANNOUNCE_CHANNEL_ID`.
-- **Hourly check**: at minute 5 of every hour the bot looks for new comps and posts them in `ANNOUNCE_CHANNEL_ID`.
+- **Check**: every 5 minutes the bot looks for new comps and posts them in `ANNOUNCE_CHANNEL_ID`.
 - **Scope**: WCA competitions with `country_iso2=CA` whose `city` ends with `, Quebec`.
-- **New comp**: `announced_at` is within the previous full clock hour, `[floor(now) - 1h, floor(now))`. Consecutive runs never overlap, so each comp is posted once. A run that fails all retries does not backfill its hour.
+- **New comp**: `announced_at` is within the 5-minute window `[end - 5 min, end)`, where `end` is a multiple of 5 minutes. Each window is checked 2 minutes after it ends, to allow for WCA list lag. Windows tile time with no overlap, so each comp is posted once, within about 2 to 7 minutes of being announced. Restarts don't backfill or repeat a window.
 - **Output**: one message per new comp, pinging @everyone.
-- **Errors**: a failed hourly check is logged and retried up to 3 times within the hour; after that the hour is skipped.
+- **Errors**: a failed check is logged and retried up to 3 times, 1 minute apart, for the same window; after that the window is skipped.
+- **Logs** (`journalctl -u qc-bot`): every `/announce` (posted, preview, not found, failed, with user and channel), every automatic post, failed checks, and an `alive` line each hour.
 
 ## `/announce url:<comp URL or id> [private:true|false]`
 - Builds the message for that comp (any comp, Quebec or not).
@@ -20,7 +21,8 @@ Posts an announcement in the QC Discord for every new WCA competition in Quebec.
 - Commands are registered at bot startup.
 
 ## CLI
-`node bot.js print <compId|comp URL>` prints the message to stdout, without connecting to Discord.
+- `node bot.js print <compId|comp URL>` prints the message to stdout, without connecting to Discord.
+- `node bot.js check <hours>` runs one check over the last `<hours>` and exits. It reposts anything in that range, so it is for testing only.
 
 ## Message format
 ```
