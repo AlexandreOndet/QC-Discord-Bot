@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { ChannelType, Client, GatewayIntentBits, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { format, compId, announcedIn, windowEnd } from './format.js';
 
 const WCA = 'https://www.worldcubeassociation.org/api/v0/competitions';
@@ -37,8 +37,49 @@ const command = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.MentionEveryone)
   .setContexts(InteractionContextType.Guild);
 
+const projet = new SlashCommandBuilder()
+  .setName('projet')
+  .setDescription('Crée la catégorie et les salons d’un projet de compétition')
+  .addStringOption((o) => o.setName('nom').setDescription('Nom du projet').setRequired(true))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+  .setContexts(InteractionContextType.Guild);
+
+const ABOVE_CATEGORY = '1019989519166095360';
+const PUBLIC_ROLES = ['Administrateur', 'Modérateur', 'Délégué WCA', 'Organisateur'];
+const PRIVATE_ROLE = 'QC-Delegates';
+
+async function createProject(i) {
+  const name = i.options.getString('nom').trim();
+  const who = i.user.tag;
+  try {
+    await i.deferReply({ flags: MessageFlags.Ephemeral });
+    const { guild } = i;
+    const role = (n) => guild.roles.cache.find((r) => r.name === n);
+    const missing = [...PUBLIC_ROLES, PRIVATE_ROLE].filter((n) => !role(n));
+    if (missing.length) return await i.editReply(`Rôle introuvable: ${missing.join(', ')}`);
+    // The bot's own entry keeps it able to add channels inside the hidden category.
+    const view = (names) => [
+      { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+      ...[...names.map((n) => role(n).id), client.user.id].map((id) => ({ id, allow: [PermissionFlagsBits.ViewChannel] })),
+    ];
+    const category = await guild.channels.create({ name, type: ChannelType.GuildCategory, permissionOverwrites: view(PUBLIC_ROLES) });
+    await category.setPosition((await guild.channels.fetch(ABOVE_CATEGORY)).position);
+    const text = (suffix, names) =>
+      guild.channels.create({ name: `${name}-${suffix}`, type: ChannelType.GuildText, parent: category, permissionOverwrites: view(names) });
+    const pub = await text('public', PUBLIC_ROLES);
+    const priv = await text('private', [PRIVATE_ROLE]);
+    console.log(`/projet ${name}: created (${who})`);
+    await i.editReply(`Projet créé: ${pub} ${priv}`);
+  } catch (e) {
+    console.error(`/projet ${name} failed (${who})`, e);
+    await i.editReply(`Erreur: ${e.message}`).catch(() => {});
+  }
+}
+
 client.on('interactionCreate', async (i) => {
-  if (!i.isChatInputCommand() || i.commandName !== 'announce') return;
+  if (!i.isChatInputCommand()) return;
+  if (i.commandName === 'projet') return createProject(i);
+  if (i.commandName !== 'announce') return;
   const input = i.options.getString('url');
   const who = `${i.user.tag} in #${i.channel?.name}`;
   try {
@@ -102,7 +143,7 @@ client.once('clientReady', async () => {
     await postNew(windowEnd(Date.now(), EVERY), Number(process.argv[3] ?? 1) * 60);
     process.exit(0);
   }
-  await client.application.commands.set([command]);
+  await client.application.commands.set([command, projet]);
   console.log(`logged in as ${client.user.tag}`);
   schedule();
 });

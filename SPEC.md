@@ -20,6 +20,13 @@ Posts an announcement in the QC Discord for every new WCA competition in Quebec.
 - Reply is deferred first, so slow WCA responses don't hit Discord's 3 s limit.
 - Commands are registered at bot startup.
 
+## `/projet nom:<nom>`
+- Creates a category `<nom>` placed right above category `1019989519166095360`, visible only to Administrateur, Modérateur, Délégué WCA and Organisateur.
+- Inside it: `<nom>-public` (same roles) and `<nom>-private` (QC-Delegates only).
+- Only members with "Manage Channels" see the command.
+- A missing role (looked up by exact name): ephemeral error, nothing created.
+- Bot needs Manage Channels and Manage Roles.
+
 ## CLI
 - `node bot.js print <compId|comp URL>` prints the message to stdout, without connecting to Discord.
 - `node bot.js check <hours>` runs one check over the last `<hours>` and exits. It reposts anything in that range, so it is for testing only.
